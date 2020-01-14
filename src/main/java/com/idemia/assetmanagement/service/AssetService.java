@@ -18,4 +18,8 @@ public interface AssetService {
     List<Asset> getAssetByEmployeeId(Long employeeId);
 
     List<AssetSummary> getSummary();
+
+    boolean removeAssetWithId(Long sNo);
+
+    Asset updateAssetEntry(Asset asset);
 }

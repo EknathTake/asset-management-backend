@@ -32,7 +32,7 @@ public class Employee {
 
     private String technology;
 
-    @OneToMany(mappedBy = "employee", orphanRemoval = true)
+    @OneToMany(mappedBy = "employee")
     private Set<Asset> asset;
 
 }

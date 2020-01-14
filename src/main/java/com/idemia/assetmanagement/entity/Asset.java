@@ -32,7 +32,11 @@ public class Asset {
 
     private LocalDateTime dateAllocated;
 
+    private LocalDateTime dateOfReturn;
+
     private String hostname;
 
     private String status;
+
+    private String remark;
 }

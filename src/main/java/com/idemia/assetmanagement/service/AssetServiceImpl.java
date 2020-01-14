@@ -9,6 +9,7 @@ import com.idemia.assetmanagement.repository.AssetRepository;
 import com.idemia.assetmanagement.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,7 +38,12 @@ public class AssetServiceImpl implements AssetService {
     @Autowired
     private EmployeeRepository employeeRepository;
 
+    private static String getStatus(AssetSummary o) {
+        return o.getAssetDetails().getStatus();
+    }
+
     @Override
+    @Transactional
     public Asset createAssetEntry(Asset asset) {
 
         Employee empEntity = employeeRepository.save(mapEmployeeToEntity(asset.getEmployee()));
@@ -49,6 +55,7 @@ public class AssetServiceImpl implements AssetService {
     private Asset mapAssetToControllerResponse(com.idemia.assetmanagement.entity.Asset asset) {
         return Asset.builder().assetTag(asset.getAssetTag())
                 .dateAllocated(asset.getDateAllocated())
+                .dateOfReturn(asset.getDateOfReturn())
                 .hostname(asset.getHostname())
                 .model(asset.getModel())
                 .ram(asset.getRam())
@@ -56,6 +63,7 @@ public class AssetServiceImpl implements AssetService {
                 .serialNumber(asset.getSerialNumber())
                 .status(asset.getStatus())
                 .employee(mapEmployeeToControllerResponse(asset.getEmployee()))
+                .remark(asset.getRemark())
                 .build();
     }
 
@@ -86,23 +94,31 @@ public class AssetServiceImpl implements AssetService {
     }
 
     @Override
+    @Transactional
     public List<Asset> getAllAssets() {
-        return assetRepository.findAll().stream().map(asset -> {
-            return mapAssetToControllerResponse(asset);
-        }).collect(Collectors.toList());
+        return assetRepository.findAll()
+                .stream().map(asset -> mapAssetToControllerResponse(asset))
+                .sorted(Comparator
+                        .comparing(Asset::getSNo)
+                        .reversed()).
+                        collect(Collectors.toList());
     }
 
     @Override
+    @Transactional
     public Asset getAssetById(Long id) {
-        return mapAssetToControllerResponse(assetRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("id")));
+        return mapAssetToControllerResponse(assetRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("id")));
     }
 
     @Override
+    @Transactional
     public List<Asset> getAssetByEmployeeId(Long employeeId) {
         return null;
     }
 
     @Override
+    @Transactional
     public List<AssetSummary> getSummary() {
 
         List<Asset> assets = getAllAssets();
@@ -112,19 +128,65 @@ public class AssetServiceImpl implements AssetService {
         List<AssetSummary> row5 = filterAssetsBtStatus(assets, WINDOWS, assetStatus);
 
         row9.addAll(row5);
-        return row9.stream().sorted(Comparator.comparing(o -> o.getAssetDetails().getStatus())).collect(Collectors.toList());
+        return row9.stream()
+                .sorted(Comparator.comparing(AssetServiceImpl::getStatus))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public boolean removeAssetWithId(Long sNo) {
+        if (assetRepository.findById(sNo).isPresent()) {
+            assetRepository.deleteById(sNo);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    @Transactional
+    public Asset updateAssetEntry(Asset asset) {
+        return assetRepository.findById(asset.getSNo())
+                .map(newAssetDetails -> {
+                    newAssetDetails.setEmployee(employeeRepository.findById(asset.getEmployee().getEmpId())
+                            .map(newEmpDetails -> {
+                                newEmpDetails.setEmpId(asset.getEmployee().getEmpId());
+                                newEmpDetails.setFirstName(asset.getEmployee().getFirstName());
+                                newEmpDetails.setLastName(asset.getEmployee().getLastName());
+                                newEmpDetails.setCostCenter(asset.getEmployee().getCostCenter());
+                                newEmpDetails.setJobRole(asset.getEmployee().getJobRole());
+                                newEmpDetails.setProductLine(asset.getEmployee().getProductLine());
+                                newEmpDetails.setTechnology(asset.getEmployee().getTechnology());
+                                employeeRepository.save(newEmpDetails);
+                                return newEmpDetails;
+                            })
+                            .orElseThrow(() -> new ResourceNotFoundException("Employee not found: " + asset)));
+                    newAssetDetails.setAssetTag(asset.getAssetTag());
+                    newAssetDetails.setDateAllocated(asset.getDateAllocated());
+                    newAssetDetails.setDateOfReturn(asset.getDateOfReturn());
+                    newAssetDetails.setHostname(asset.getHostname());
+                    newAssetDetails.setModel(asset.getModel());
+                    newAssetDetails.setRam(asset.getRam());
+                    newAssetDetails.setSNo(asset.getSNo());
+                    newAssetDetails.setStatus(asset.getStatus());
+                    newAssetDetails.setSerialNumber(asset.getSerialNumber());
+                    newAssetDetails.setRemark(asset.getRemark());
+                    return mapAssetToControllerResponse(assetRepository.save(newAssetDetails));
+                    //return newAssetDetails;
+                })
+                .orElseThrow(() -> new ResourceNotFoundException("Asset not found: " + asset));
     }
 
     private List<AssetSummary> filterAssetsBtStatus(List<Asset> assets, String model, List<String> statusList) {
         List<AssetSummary> assetSummaryList = new ArrayList<>();
-        for (String status: statusList) {
+        for (String status : statusList) {
             AssetSummary assetSummary = new AssetSummary();
             long count16 = 0, count8 = 0, count4 = 0;
 
             Laptop laptop = null;
             for (Asset asset : assets) {
-                 laptop = new Laptop();
-                if (asset.getModel().contains(model) && asset.getStatus().equals(status)) {
+                laptop = new Laptop();
+                if (asset.getModel().toLowerCase().contains(model.toLowerCase()) && asset.getStatus().equals(status)) {
                     if (asset.getRam().equals(RAM16)) {
                         count16 += 1;
                     }
@@ -140,7 +202,7 @@ public class AssetServiceImpl implements AssetService {
                 laptop.setRam8GB(count8);
                 laptop.setRam4GB(count4);
                 laptop.setModel(model);
-                laptop.setTotal(count4+count8+count16);
+                laptop.setTotal(count4 + count8 + count16);
                 laptop.setStatus(status);
             }
 
@@ -156,6 +218,7 @@ public class AssetServiceImpl implements AssetService {
                 .builder()
                 .assetTag(asset.getAssetTag())
                 .dateAllocated(asset.getDateAllocated())
+                .dateOfReturn(asset.getDateOfReturn())
                 .hostname(asset.getHostname())
                 .model(asset.getModel())
                 .ram(asset.getRam())
@@ -163,6 +226,7 @@ public class AssetServiceImpl implements AssetService {
                 .serialNumber(asset.getSerialNumber())
                 .status(asset.getStatus())
                 .employee(mapEmployeeToEntity(asset.getEmployee()))
+                .remark(asset.getRemark())
                 .build();
     }
 

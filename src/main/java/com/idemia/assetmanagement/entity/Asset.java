@@ -17,9 +17,8 @@ public class Asset {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long sNo;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fk_employee")
-    private Employee employee;
+    @Column(unique = true)
+    private String assetTag;
 
     private String model;
 
@@ -28,15 +27,12 @@ public class Asset {
 
     private String serialNumber;
 
-    private String assetTag;
+    private LocalDateTime dateOfPurchase;
 
-    private LocalDateTime dateAllocated;
+    private boolean isUnderWarranty;
 
-    private LocalDateTime dateOfReturn;
+    private boolean isDamaged;
 
-    private String hostname;
+    private boolean isRepaired;
 
-    private String status;
-
-    private String remark;
 }

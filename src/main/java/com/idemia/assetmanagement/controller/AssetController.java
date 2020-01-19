@@ -1,6 +1,6 @@
 package com.idemia.assetmanagement.controller;
 
-import com.idemia.assetmanagement.controller.response.Asset;
+import com.idemia.assetmanagement.model.asset.Asset;
 import com.idemia.assetmanagement.model.asset.AssetSummary;
 import com.idemia.assetmanagement.service.AssetService;
 import lombok.Data;
@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static org.springframework.http.MediaType.*;
 
 @Log4j2
 @RestController
@@ -27,14 +29,15 @@ public class AssetController {
         return dtr;
     }
 
-    @PostMapping
+    @PostMapping(consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Asset> createAssetEntry(@RequestBody Asset asset) {
         return ResponseEntity.ok(assetService.createAssetEntry(asset));
     }
 
     @PutMapping
     public ResponseEntity<Asset> updateAssetEntry(@RequestBody Asset asset) {
-        return ResponseEntity.ok(assetService.updateAssetEntry(asset));
+        Asset body = assetService.updateAssetEntry(asset);
+        return ResponseEntity.ok(body);
     }
 
     @DeleteMapping("/{sNo}")

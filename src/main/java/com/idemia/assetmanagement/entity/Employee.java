@@ -1,11 +1,8 @@
 package com.idemia.assetmanagement.entity;
 
-import com.sun.javafx.beans.IDProperty;
 import lombok.*;
 
 import javax.persistence.*;
-import java.util.List;
-import java.util.Set;
 
 @Entity
 @Data
@@ -31,8 +28,5 @@ public class Employee {
     private String jobRole;
 
     private String technology;
-
-    @OneToMany(mappedBy = "employee")
-    private Set<Asset> asset;
 
 }

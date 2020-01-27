@@ -1,5 +1,6 @@
 package com.idemia.assetmanagement.service;
 
+import com.idemia.assetmanagement.controller.response.AssetHistoryResponse;
 import com.idemia.assetmanagement.controller.response.Employee;
 import com.idemia.assetmanagement.model.asset.Asset;
 import com.idemia.assetmanagement.model.asset.AssetHistory;
@@ -7,6 +8,7 @@ import com.idemia.assetmanagement.model.asset.AssetStatus;
 import com.idemia.assetmanagement.repository.AssetHistoryRepository;
 import com.idemia.assetmanagement.repository.AssetRepository;
 import com.idemia.assetmanagement.repository.EmployeeRepository;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +35,7 @@ public class AssetHistoryService {
         return mapAssetHistoryEntityToModel(assetHistoryRepository.save(assetHistoryEntity));
     }
 
-    private AssetHistory mapAssetHistoryEntityToModel(com.idemia.assetmanagement.entity.AssetHistory save) {
+    public AssetHistory mapAssetHistoryEntityToModel(com.idemia.assetmanagement.entity.AssetHistory save) {
 
         com.idemia.assetmanagement.entity.Asset asset = assetRepository.findById(save.getAsset().getSNo()).orElse(null);
 
@@ -49,7 +51,7 @@ public class AssetHistoryService {
     }
 
     private Employee mapEmployeeEntityToModel(com.idemia.assetmanagement.entity.Employee employee) {
-        if(null!= employee){
+        if (null != employee) {
             return Employee.builder()
                     .costCenter(employee.getCostCenter())
                     .empId(employee.getEmpId())
@@ -89,9 +91,9 @@ public class AssetHistoryService {
                 .dateOfAllocated(assetHistory.getDateOfAllocated())
                 .dateOfReturn(assetHistory.getDateOfReturn())
                 .build();
-        if(null != assetHistory.getEmployee())
+        if (null != assetHistory.getEmployee())
             assetHistory1.setEmployee(employeeRepository.findById(assetHistory.getEmployee().getEmpId()).orElse(null));
-        if ( null != assetHistory.getStatus() && !assetHistory.getStatus().equals(AssetStatus.ALLOCATED)){
+        if (null != assetHistory.getStatus() && !assetHistory.getStatus().equals(AssetStatus.ALLOCATED)) {
             //assetHistory1.setDateOfReturn(null);
             assetHistory1.setDateOfAllocated(null);
         }
@@ -125,11 +127,16 @@ public class AssetHistoryService {
                 .build();
     }
 
-    public List<AssetHistory> getAllAssets() {
-        return assetHistoryRepository.findAll()
+    public AssetHistoryResponse getAllAssetsHistory() {
+
+        AssetHistoryResponse response = new AssetHistoryResponse();
+        response.setData(assetHistoryRepository.findAll()
                 .stream()
                 .filter(Objects::nonNull)
                 .map(this::mapAssetHistoryEntityToModel)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
+        return response;
     }
 }
+
+

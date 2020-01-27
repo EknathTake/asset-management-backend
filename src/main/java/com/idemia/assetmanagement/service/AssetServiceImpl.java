@@ -1,12 +1,12 @@
 package com.idemia.assetmanagement.service;
 
-import com.idemia.assetmanagement.controller.response.Asset;
+import com.idemia.assetmanagement.model.asset.Asset;
 import com.idemia.assetmanagement.entity.Employee;
 import com.idemia.assetmanagement.exception.ResourceNotFoundException;
+import com.idemia.assetmanagement.model.asset.AssetHistory;
 import com.idemia.assetmanagement.model.asset.AssetSummary;
 import com.idemia.assetmanagement.model.asset.Laptop;
 import com.idemia.assetmanagement.repository.AssetRepository;
-import com.idemia.assetmanagement.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,7 @@ public class AssetServiceImpl implements AssetService {
 
     //Asset Models
     public static final String MAC_BOOK = "MacBook";
-    public static final String WINDOWS = "Lenovo";
+    public static final String WINDOWS = "Windows";
 
     //RAM
     public static final String RAM16 = "16";
@@ -27,16 +27,16 @@ public class AssetServiceImpl implements AssetService {
     public static final String RAM4 = "4";
 
     //Asset Status
-    public static final String ALLOCATED = "Allocated";
-    public static final String INVENTORY = "Inventory";
-    public static final String INVENTORY_NOT_WORKING = "Inventory - not working";
-    public static final String DISCARDED = "Discarded";
+    public static final String ALLOCATED = "ALLOCATED";
+    public static final String INVENTORY = "INVENTORY";
+    public static final String INVENTORY_NOT_WORKING = "INVENTORY_NOT_WORKING";
+    public static final String DISCARDED = "DISCARDED";
 
     @Autowired
     private AssetRepository assetRepository;
 
     @Autowired
-    private EmployeeRepository employeeRepository;
+    private AssetHistoryService assetHistoryService;
 
     private static String getStatus(AssetSummary o) {
         return o.getAssetDetails().getStatus();
@@ -46,24 +46,19 @@ public class AssetServiceImpl implements AssetService {
     @Transactional
     public Asset createAssetEntry(Asset asset) {
 
-        Employee empEntity = employeeRepository.save(mapEmployeeToEntity(asset.getEmployee()));
-        com.idemia.assetmanagement.entity.Asset entity = mapAssetToEntity(asset);
-        entity.setEmployee(empEntity);
-        return mapAssetToControllerResponse(assetRepository.save(entity));
+        return mapAssetToControllerResponse(assetRepository.save(mapAssetToEntity(asset)));
     }
 
     private Asset mapAssetToControllerResponse(com.idemia.assetmanagement.entity.Asset asset) {
         return Asset.builder().assetTag(asset.getAssetTag())
-                .dateAllocated(asset.getDateAllocated())
-                .dateOfReturn(asset.getDateOfReturn())
-                .hostname(asset.getHostname())
                 .model(asset.getModel())
                 .ram(asset.getRam())
                 .sNo(asset.getSNo())
                 .serialNumber(asset.getSerialNumber())
-                .status(asset.getStatus())
-                .employee(mapEmployeeToControllerResponse(asset.getEmployee()))
-                .remark(asset.getRemark())
+                .dateOfPurchase(asset.getDateOfPurchase())
+                .isDamaged(asset.isDamaged())
+                .isRepaired(asset.isRepaired())
+                .isUnderWarranty(asset.isUnderWarranty())
                 .build();
     }
 
@@ -79,6 +74,7 @@ public class AssetServiceImpl implements AssetService {
                 .location(employee.getLocation())
                 .build();
     }
+/*
 
     private Employee mapEmployeeToEntity(com.idemia.assetmanagement.controller.response.Employee employee) {
         return Employee.builder()
@@ -92,6 +88,7 @@ public class AssetServiceImpl implements AssetService {
                 .location(employee.getLocation())
                 .build();
     }
+*/
 
     @Override
     @Transactional
@@ -99,33 +96,25 @@ public class AssetServiceImpl implements AssetService {
         return assetRepository.findAll()
                 .stream().map(asset -> mapAssetToControllerResponse(asset))
                 .sorted(Comparator
-                        .comparing(Asset::getSNo)
+                        .comparing(Asset::getsNo)
                         .reversed()).
                         collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public Asset getAssetById(Long id) {
-        return mapAssetToControllerResponse(assetRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("id")));
-    }
-
-    @Override
-    @Transactional
-    public List<Asset> getAssetByEmployeeId(Long employeeId) {
-        return null;
-    }
-
-    @Override
-    @Transactional
     public List<AssetSummary> getSummary() {
 
-        List<Asset> assets = getAllAssets();
+        //List<Asset> assets = getAllAssets();
+        List<AssetHistory> assetHistories = assetHistoryService.getAllAssetsHistory().getData();
+                //.stream()
+               // .filter(Objects::nonNull)
+                //.map(assetHistory -> assetHistoryService.(assetHistory))
+               // .collect(Collectors.toList());
         List<String> assetStatus = Arrays.asList(ALLOCATED, INVENTORY_NOT_WORKING, INVENTORY, DISCARDED);
 
-        List<AssetSummary> row9 = filterAssetsBtStatus(assets, MAC_BOOK, assetStatus);
-        List<AssetSummary> row5 = filterAssetsBtStatus(assets, WINDOWS, assetStatus);
+        List<AssetSummary> row9 = filterAssetsBtStatus(assetHistories, MAC_BOOK, assetStatus);
+        List<AssetSummary> row5 = filterAssetsBtStatus(assetHistories, WINDOWS, assetStatus);
 
         row9.addAll(row5);
         return row9.stream()
@@ -146,55 +135,41 @@ public class AssetServiceImpl implements AssetService {
     @Override
     @Transactional
     public Asset updateAssetEntry(Asset asset) {
-        return assetRepository.findById(asset.getSNo())
+        return assetRepository.findById(asset.getsNo())
                 .map(newAssetDetails -> {
-                    newAssetDetails.setEmployee(employeeRepository.findById(asset.getEmployee().getEmpId())
-                            .map(newEmpDetails -> {
-                                newEmpDetails.setEmpId(asset.getEmployee().getEmpId());
-                                newEmpDetails.setFirstName(asset.getEmployee().getFirstName());
-                                newEmpDetails.setLastName(asset.getEmployee().getLastName());
-                                newEmpDetails.setCostCenter(asset.getEmployee().getCostCenter());
-                                newEmpDetails.setJobRole(asset.getEmployee().getJobRole());
-                                newEmpDetails.setProductLine(asset.getEmployee().getProductLine());
-                                newEmpDetails.setTechnology(asset.getEmployee().getTechnology());
-                                employeeRepository.save(newEmpDetails);
-                                return newEmpDetails;
-                            })
-                            .orElseThrow(() -> new ResourceNotFoundException("Employee not found: " + asset)));
                     newAssetDetails.setAssetTag(asset.getAssetTag());
-                    newAssetDetails.setDateAllocated(asset.getDateAllocated());
-                    newAssetDetails.setDateOfReturn(asset.getDateOfReturn());
-                    newAssetDetails.setHostname(asset.getHostname());
                     newAssetDetails.setModel(asset.getModel());
                     newAssetDetails.setRam(asset.getRam());
-                    newAssetDetails.setSNo(asset.getSNo());
-                    newAssetDetails.setStatus(asset.getStatus());
+                    newAssetDetails.setSNo(asset.getsNo());
                     newAssetDetails.setSerialNumber(asset.getSerialNumber());
-                    newAssetDetails.setRemark(asset.getRemark());
+                    newAssetDetails.setDateOfPurchase(asset.getDateOfPurchase());
+                    newAssetDetails.setDamaged(asset.isDamaged());
+                    newAssetDetails.setUnderWarranty(asset.isUnderWarranty());
+                    newAssetDetails.setRepaired(asset.isRepaired());
                     return mapAssetToControllerResponse(assetRepository.save(newAssetDetails));
-                    //return newAssetDetails;
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Asset not found: " + asset));
     }
 
-    private List<AssetSummary> filterAssetsBtStatus(List<Asset> assets, String model, List<String> statusList) {
+    private List<AssetSummary> filterAssetsBtStatus(List<AssetHistory> assets, String model, List<String> statusList) {
         List<AssetSummary> assetSummaryList = new ArrayList<>();
         for (String status : statusList) {
             AssetSummary assetSummary = new AssetSummary();
             long count16 = 0, count8 = 0, count4 = 0;
 
             Laptop laptop = null;
-            for (Asset asset : assets) {
+            for (AssetHistory asset : assets) {
                 laptop = new Laptop();
-                if (asset.getModel().toLowerCase().contains(model.toLowerCase()) && asset.getStatus().equals(status)) {
-                    if (asset.getRam().equals(RAM16)) {
+                if (asset.getAsset().getModel().toLowerCase().contains(model.toLowerCase()) && asset.getStatus().name().toLowerCase().equals(status.toLowerCase())) {
+                //if (asset.getAsset().getModel().toLowerCase().contains(model.toLowerCase())) {
+                    if (asset.getAsset().getRam().equals(RAM16)) {
                         count16 += 1;
                     }
-                    if (asset.getRam().equals(RAM8)) {
+                    if (asset.getAsset().getRam().equals(RAM8)) {
                         count8 += 1;
 
                     }
-                    if (asset.getRam().equals(RAM4)) {
+                    if (asset.getAsset().getRam().equals(RAM4)) {
                         count4 += 1;
                     }
                 }
@@ -206,7 +181,7 @@ public class AssetServiceImpl implements AssetService {
                 laptop.setStatus(status);
             }
 
-            //assetSummary.setStatus(status);
+//            assetSummary.getAssetDetails().setStatus(status);
             assetSummary.setAssetDetails(laptop);
             assetSummaryList.add(assetSummary);
         }
@@ -217,16 +192,14 @@ public class AssetServiceImpl implements AssetService {
         return com.idemia.assetmanagement.entity.Asset
                 .builder()
                 .assetTag(asset.getAssetTag())
-                .dateAllocated(asset.getDateAllocated())
-                .dateOfReturn(asset.getDateOfReturn())
-                .hostname(asset.getHostname())
                 .model(asset.getModel())
                 .ram(asset.getRam())
-                .sNo(asset.getSNo())
+                .sNo(asset.getsNo())
                 .serialNumber(asset.getSerialNumber())
-                .status(asset.getStatus())
-                .employee(mapEmployeeToEntity(asset.getEmployee()))
-                .remark(asset.getRemark())
+                .dateOfPurchase(asset.getDateOfPurchase())
+                .isDamaged(asset.isDamaged())
+                .isRepaired(asset.isRepaired())
+                .isUnderWarranty(asset.isUnderWarranty())
                 .build();
     }
 

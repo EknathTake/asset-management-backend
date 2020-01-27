@@ -1,13 +1,12 @@
 package com.idemia.assetmanagement.controller;
 
+import com.idemia.assetmanagement.controller.response.AssetHistoryResponse;
 import com.idemia.assetmanagement.model.asset.AssetHistory;
 import com.idemia.assetmanagement.service.AssetHistoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/asset")
@@ -28,7 +27,7 @@ public class AssetHistoryController {
     }
 
     @GetMapping("/history")
-    public List<AssetHistory> getAllAssets(){
-        return assetHistoryService.getAllAssets();
+    public AssetHistoryResponse getAllAssets() {
+        return assetHistoryService.getAllAssetsHistory();
     }
 }

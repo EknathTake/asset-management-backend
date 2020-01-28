@@ -161,13 +161,11 @@ public class AssetServiceImpl implements AssetService {
             for (AssetHistory asset : assets) {
                 laptop = new Laptop();
                 if (asset.getAsset().getModel().toLowerCase().contains(model.toLowerCase()) && asset.getStatus().name().toLowerCase().equals(status.toLowerCase())) {
-                //if (asset.getAsset().getModel().toLowerCase().contains(model.toLowerCase())) {
                     if (asset.getAsset().getRam().equals(RAM16)) {
                         count16 += 1;
                     }
                     if (asset.getAsset().getRam().equals(RAM8)) {
                         count8 += 1;
-
                     }
                     if (asset.getAsset().getRam().equals(RAM4)) {
                         count4 += 1;

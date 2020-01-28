@@ -3,10 +3,8 @@ package com.idemia.assetmanagement.service;
 import com.idemia.assetmanagement.controller.response.Employee;
 import com.idemia.assetmanagement.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
